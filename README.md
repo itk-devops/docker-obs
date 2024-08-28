@@ -31,6 +31,44 @@ Set the output as the environment variable `LOKI_BASIC_AUTH` to that value in
 
 Default login `admin` and `admin`.
 
+## Prometheus
+
+To scrape custom end-points, you need to copy the default prometheus 
+configuration file located in `.docker/prometheus-config.yml` into a new local
+config file and make a docker compose override file data override the prometheus
+default container volume config file mapping.
+
+For complet configuration overview see: https://prometheus.io/docs/prometheus/latest/configuration/configuration/
+
+```yaml
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: 'local_metrics'
+    scrape_interval: 10s
+    metrics_path: metrics
+    scheme: http
+    static_configs:
+      - targets:
+        - <site1.local.itkdev.dk:80>
+        - <site2.local.itkdev.dk:80>
+```
+
+You may need to bring look up the end-points in the frontend network.
+
+```shell
+docker network inspect frontend
+```
+
+Or you can guess the name, which normally will be `<namespace>-nginx-1.frontend`. 
+
 ## Endpoints
 
 http://logs.local.itkdev.dk/

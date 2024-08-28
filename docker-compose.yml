@@ -67,7 +67,7 @@ services:
       - "9090"
     volumes:
       - .docker/data/prometheus:/prometheus:rw
-#      - /path/to/prometheus.yml:/etc/prometheus/prometheus.yml
+      - .docker/prometheus-config.yml:/etc/prometheus/prometheus.yml:r
 
   grafana:
     image: grafana/grafana:latest
