@@ -1,0 +1,55 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+
+common:
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+query_range:
+  results_cache:
+    cache:
+      embedded_cache:
+        enabled: true
+        max_size_mb: 100
+
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  max_query_lookback: 672h # 28 days
+  retention_period: 672h   # 28 days
+
+compactor:
+  working_directory: /data/retention
+  delete_request_store: filesystem
+  retention_enabled: true
+
+storage_config:
+  tsdb_shipper:
+    active_index_directory: /data/index
+    cache_location: /data/index_cache
+  filesystem:
+    directory: /data/chunks
+
+ingester:
+  wal:
+    dir: "/data/wal"
+
+ruler:
+  alertmanager_url: http://localhost:9093
+
+frontend:
+  encoding: protobuf
+

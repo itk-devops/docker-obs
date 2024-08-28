@@ -1,0 +1,3 @@
+.docker/data/loki
+.docker/data/grafana/
+.docker/data/prometheus/

@@ -1,0 +1,112 @@
+networks:
+  frontend:
+    external: true
+  app:
+    driver: bridge
+    internal: false
+
+services:
+  nginx:
+    image: nginxinc/nginx-unprivileged:alpine
+    networks:
+      - app
+      - frontend
+    depends_on:
+      - loki
+      - grafana
+      - prometheus
+    ports:
+      - '8080'
+    volumes:
+      - ./.docker/templates:/etc/nginx/templates:ro
+      - .:/app
+    environment:
+      NGINX_WEB_ROOT: /app/web
+      NGINX_PORT: 8080
+      NGINX_MAX_BODY_SIZE: 5M
+      LOKI_DOMAIN: ${COMPOSE_LOKI_DOMAIN}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=frontend"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.rule=Host(`${COMPOSE_DOMAIN}`)"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}loki.rule=Host(`${COMPOSE_LOKI_DOMAIN}`)"
+      - "traefik.http.middlewares.api-auth.basicauth.users=${LOKI_BASIC_AUTH}"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}loki.middlewares=api-auth"
+#      HTTPS config - uncomment to enable redirect from :80 to :443
+#      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.middlewares=redirect-to-https"
+#      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+
+  loki:
+    image: grafana/loki:3.1.0
+    user: "1042:1042"
+    ports:
+      - "3100"
+    command: -config.file=/mnt/config/loki-config.yaml
+    networks:
+      - app
+    volumes:
+      - .docker/loki-config.yaml:/mnt/config/loki-config.yaml:r
+      - .docker/data/loki:/data:rw
+
+  # Used to log information for the logging server itself.
+  promtail:
+    image: grafana/promtail:3.1.0
+    command: -config.file=/mnt/config/promtail-config.yaml
+    networks:
+      - app
+    volumes:
+      - .docker/promtail-config.yaml:/mnt/config/promtail-config.yaml:r
+      - /var/log:/var/log
+
+  prometheus:
+    image: prom/prometheus
+    networks:
+      - app
+      - frontend
+    ports:
+      - "9090"
+    volumes:
+      - .docker/data/prometheus:/prometheus:rw
+#      - /path/to/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    networks:
+      - app
+    depends_on:
+      - loki
+    ports:
+      - "3000"
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        mkdir -p /etc/grafana/provisioning/datasources
+        cat <<EOF > /etc/grafana/provisioning/datasources/ds.yaml
+        apiVersion: 1
+        datasources:
+        - name: Loki
+          type: loki
+          access: proxy 
+          orgId: 1
+          url: http://loki:3100
+          basicAuth: false
+          isDefault: false
+          version: 1
+          editable: false
+        - name: Prometheus
+          type: prometheus
+          isDefault: true
+          access: proxy
+          # Access mode - proxy (server in the UI) or direct (browser in the UI).
+          url: http://prometheus:9090
+          jsonData:
+            httpMethod: POST
+        EOF
+        /run.sh
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    volumes:
+      - .docker/data/grafana:/var/lib/grafana:rw
