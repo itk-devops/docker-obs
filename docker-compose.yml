@@ -25,11 +25,13 @@ services:
       NGINX_PORT: 8080
       NGINX_MAX_BODY_SIZE: 5M
       LOKI_DOMAIN: ${COMPOSE_LOKI_DOMAIN}
+      PROMETHEUS_DOMAIN: ${COMPOSE_PROMETHEUS_DOMAIN}
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=frontend"
       - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.rule=Host(`${COMPOSE_DOMAIN}`)"
-      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}loki.rule=Host(`${COMPOSE_LOKI_DOMAIN}`)"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}-loki.rule=Host(`${COMPOSE_LOKI_DOMAIN}`)"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}-prom.rule=Host(`${COMPOSE_PROMETHEUS_DOMAIN}`)"
       - "traefik.http.middlewares.api-auth.basicauth.users=${LOKI_BASIC_AUTH}"
       - "traefik.http.routers.${COMPOSE_PROJECT_NAME}loki.middlewares=api-auth"
 #      HTTPS config - uncomment to enable redirect from :80 to :443
@@ -45,7 +47,7 @@ services:
     networks:
       - app
     volumes:
-      - .docker/loki-config.yaml:/mnt/config/loki-config.yaml:r
+      - .docker/loki-config.yaml:/mnt/config/loki-config.yaml:ro
       - .docker/data/loki:/data:rw
 
   # Used to log information for the logging server itself.
@@ -55,7 +57,7 @@ services:
     networks:
       - app
     volumes:
-      - .docker/promtail-config.yaml:/mnt/config/promtail-config.yaml:r
+      - .docker/promtail-config.yaml:/mnt/config/promtail-config.yaml:ro
       - /var/log:/var/log
 
   prometheus:
@@ -67,7 +69,7 @@ services:
       - "9090"
     volumes:
       - .docker/data/prometheus:/prometheus:rw
-      - .docker/prometheus-config.yml:/etc/prometheus/prometheus.yml:r
+      - .docker/prometheus-config.yml:/etc/prometheus/prometheus.yml:ro
 
   grafana:
     image: grafana/grafana:latest

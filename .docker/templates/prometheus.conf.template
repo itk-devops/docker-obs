@@ -1,0 +1,33 @@
+upstream prom {
+  server prometheus:9090;
+  keepalive 15;
+}
+
+server {
+    listen ${NGINX_PORT};
+    server_name ${PROMETHEUS_DOMAIN};
+
+    root ${NGINX_WEB_ROOT};
+
+    client_max_body_size ${NGINX_MAX_BODY_SIZE};
+
+    location = /favicon.ico {
+        log_not_found off;
+        access_log off;
+    }
+
+    location / {
+        proxy_read_timeout 1800s;
+        proxy_connect_timeout 1600s;
+        proxy_pass http://prom;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Connection "Keep-Alive";
+        proxy_set_header Proxy-Connection "Keep-Alive";
+        proxy_redirect off;
+    }
+
+    error_log /dev/stderr;
+    access_log /dev/stdout main;
+}

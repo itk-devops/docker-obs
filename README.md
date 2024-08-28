@@ -71,5 +71,6 @@ Or you can guess the name, which normally will be `<namespace>-nginx-1.frontend`
 
 ## Endpoints
 
-http://logs.local.itkdev.dk/
-http://loki.local.itkdev.dk/ready
+* http://obs.local.itkdev.dk/
+* http://loki.local.itkdev.dk/ready
+* http://prom.local.itkdev.dk
